@@ -1,0 +1,15 @@
+celery
+django-celery-results
+djangorestframework
+django-redis
+drf-yasg
+flower
+pytest
+pytest-django
+pytest-freezegun
+pytest-mock
+psycopg2-binary
+psycopg2
+requests
+setuptools
+

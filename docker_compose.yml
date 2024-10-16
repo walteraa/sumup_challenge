@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=sumup_db
+      - POSTGRES_USER=sumup_user
+      - POSTGRES_PASSWORD=sumup_pass
+  cache:
+    image: "redis:alpine"
+    ports: 
+      - "6379:8379"
+  api:
+    build: .
+    command: ["./bin/wait-for-it.sh", "db:5432", "--", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+    volumes:
+      - .:/sumup_challenge
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_NAME=sumup_db
+      - DB_USER=sumup_user
+      - DB_PASSWORD=sumup_pass
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CACHE_HOST=cache
+      - CACHE_PORT=6379
+
+    depends_on:
+      - db
+      - cache
+    stdin_open: true
+    tty: true
+  worker:
+    build: .
+    command: ["celery", "-A", "sumup_challenge.celery", "worker", "-l", "info" ]
+    environment:
+      - DB_NAME=sumup_db
+      - DB_USER=sumup_user
+      - DB_PASSWORD=sumup_pass
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CACHE_HOST=cache
+      - CACHE_PORT=6379
+    depends_on:
+      - db
+      - cache

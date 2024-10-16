@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=sumup_db
+      - POSTGRES_USER=sumup_user
+      - POSTGRES_PASSWORD=sumup_pass
+  cache:
+    image: "redis:alpine"
+    ports: 
+      - "6379:8379"
+  api:
+    build: .
+    command: ["./bin/wait-for-it.sh", "db:5432", "--", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+    volumes:
+      - .:/sumup_challenge
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_NAME=sumup_db
+      - DB_USER=sumup_user
+      - DB_PASSWORD=sumup_pass
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CACHE_HOST=cache
+      - CACHE_PORT=6379
+      - OPENWEATHER_BASE_URL=https://api.openweathermap.org/data/2.5
+      - OPENWEATHER_API_KEY=3fc9cb54394cc7ad0010daa12eb9e286
+
+    depends_on:
+      - db
+      - cache
+    stdin_open: true
+    tty: true
+  worker:
+    build: .
+    command: ["celery", "-A", "sumup_challenge.celery", "worker", "-l", "info" ]
+    volumes:
+      - .:/sumup_challenge
+    depends_on:
+      - db
+      - cache
+    environment:
+      - DB_NAME=sumup_db
+      - DB_USER=sumup_user
+      - DB_PASSWORD=sumup_pass
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CACHE_HOST=cache
+      - CACHE_PORT=6379
+  flower:
+    build: .
+    command: celery -A challenge_backend.tasks flower
+    volumes:
+      - .:/sumup_challenge
+    ports:
+      - 5555:5555
+    environment:
+      CELERY_BROKER_URL: redis://cache
+      CELERY_RESULT_BACKEND: redis://cache
+    depends_on:
+      - worker
+      - cache
