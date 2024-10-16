@@ -1,0 +1,1 @@
+> Notice: All business implementation(controllers, usecases, etc...) are placed in the folder "challenge_backend", meanwhile all settings, routes(url) and middlewares are placed in the "sumup_challenge" folder. 
